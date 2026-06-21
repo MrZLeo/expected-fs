@@ -1,54 +1,181 @@
-[![Actions Status](https://github.com/filipdutescu/modern-cpp-template/workflows/MacOS/badge.svg)](https://github.com/filipdutescu/modern-cpp-template/actions)
-[![Actions Status](https://github.com/filipdutescu/modern-cpp-template/workflows/Windows/badge.svg)](https://github.com/filipdutescu/modern-cpp-template/actions)
-[![Actions Status](https://github.com/filipdutescu/modern-cpp-template/workflows/Ubuntu/badge.svg)](https://github.com/filipdutescu/modern-cpp-template/actions)
-[![codecov](https://codecov.io/gh/filipdutescu/modern-cpp-template/branch/master/graph/badge.svg)](https://codecov.io/gh/filipdutescu/modern-cpp-template)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/filipdutescu/modern-cpp-template)](https://github.com/filipdutescu/modern-cpp-template/releases)
+# expected_fs
 
-# Modern C++ Template
-
-A compact starting point for modern CMake-based C++ projects.
-
-## Features
-
-* Modern **CMake** project layout with install/export support
-* **CPM.cmake v0.42.0** as the only dependency mechanism
-* **Catch2 v3.11.0** as the only unit test framework
-* Automatic C++ standard selection: requires **at least C++20**, and upgrades to **C++23** or **C++26** when the active compiler supports it
-* Optional **Clang-Tidy** and **Cppcheck** integration
-* Optional **Doxygen** documentation target
-* Optional **code coverage**, **LTO**, **ASAN**, and **ccache**
-* GitHub Actions workflows for **Ubuntu**, **macOS**, **Windows**, and tagged releases
-* A permissive [Unlicense](https://unlicense.org/) license
+`expected_fs` is a header-only C++23 wrapper around `std::filesystem` that returns
+`std::expected<T, std::error_code>` instead of throwing `std::filesystem_error`
+for ordinary filesystem failures.
 
 ## Requirements
 
-To use the template as shipped, you need:
+* CMake 3.25+
+* A C++23 compiler and standard library with `<expected>` support
 
-* **CMake 3.25+**
-* A C++ compiler with **at least C++20** support
-* Network access during configure when CPM needs to download dependencies
+C++20 is not supported in v1. Configure or compile with a C++20-only toolchain
+will fail with a clear diagnostic.
 
-At configure time, the template inspects `CMAKE_CXX_COMPILE_FEATURES` and selects:
+## Usage
 
-* `C++26` when `cxx_std_26` is available
-* otherwise `C++23` when `cxx_std_23` is available
-* otherwise `C++20`
+```cpp
+#include <expected_fs/expected_fs.hpp>
 
-If the compiler cannot support C++20, configuration fails with a clear error.
+#include <filesystem>
+#include <iostream>
 
-## Getting Started
+int main()
+{
+  const auto size = expected_fs::file_size("data.txt");
+  if(!size)
+  {
+    std::cerr << size.error().message() << '\n';
+    return 1;
+  }
 
-Create your project from this template, then rename the project-specific placeholders:
+  std::cout << *size << '\n';
+}
+```
 
-1. Change the project name in [CMakeLists.txt](CMakeLists.txt) from `Project` to your real project name.
-2. Create `include/<your-project>/` and move or rename the sample headers accordingly.
-3. Update [cmake/SourcesAndHeaders.cmake](cmake/SourcesAndHeaders.cmake) with your real source, header, and test files.
-4. Rename [cmake/ProjectConfig.cmake.in](cmake/ProjectConfig.cmake.in) so the file name starts with your exact project name, for example `cmake/MyNewProjectConfig.cmake.in`.
-5. Update any remaining `Project_...` option names in workflows, scripts, and docs once the project name changes.
+Most functions mirror the corresponding `std::filesystem` names inside the
+`expected_fs` namespace:
 
-The template defaults to a library build. If you want to build an executable, add a `src/main.cpp` and enable `Project_BUILD_EXECUTABLE=ON`.
+```cpp
+auto created = expected_fs::create_directories("out/cache");
+auto copied = expected_fs::copy_file("input.txt", "out/input.txt");
+auto removed = expected_fs::remove("out/input.txt");
+```
 
-## Building
+The public expected alias mirrors `std::expected`, defaulting the error type to
+`std::error_code` for filesystem wrappers:
+
+```cpp
+template <class T, class E = std::error_code>
+using expected = std::expected<T, E>;
+```
+
+## API Coverage
+
+Coverage is tracked against the cppreference filesystem index and the linked
+`path`, `directory_entry`, `directory_iterator`, and
+`recursive_directory_iterator` pages:
+<https://en.cppreference.com/w/cpp/filesystem>.
+
+Rows marked as aliases are exposed through the corresponding standard type, so
+the native member functions and operators remain available. Fallible constructors
+cannot return `expected`, so they use `make_*` factory functions.
+
+| std | expected_fs | Status |
+| --- | --- | --- |
+| `std::filesystem::path` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::format`, `native_format`, `generic_format`, `auto_format` | `expected_fs::path::...` alias | ✅ |
+| `std::filesystem::path` member types/constants | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path` constructors, destructor, assignment | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::assign` | `expected_fs::path::assign` alias | ✅ |
+| `std::filesystem::path::append`, `operator/=` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::concat`, `operator+=` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::clear`, `make_preferred`, `remove_filename`, `replace_filename`, `replace_extension`, `swap` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::native`, `c_str`, `operator string_type` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::string`, `wstring`, `u8string`, `u16string`, `u32string` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::generic_string`, `generic_wstring`, `generic_u8string`, `generic_u16string`, `generic_u32string` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::compare` | `expected_fs::path::compare` alias | ✅ |
+| `std::filesystem::path::lexically_normal`, `lexically_relative`, `lexically_proximate` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path` decomposition members | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path` query members | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path::begin`, `end` | `expected_fs::path` alias | ✅ |
+| `std::filesystem::path` comparison operators | `expected_fs::path` alias | ✅ |
+| `std::filesystem::operator/(path, path)` | `expected_fs::path` alias / ADL | ✅ |
+| `std::filesystem::operator<<`, `operator>>` for `path` | `expected_fs::path` alias / ADL | ✅ |
+| `std::filesystem::swap(path&, path&)` | `expected_fs::swap(path&, path&)` | ✅ |
+| `std::filesystem::hash_value(path)` | `expected_fs::hash_value(path)` | ✅ |
+| `std::filesystem::u8path` | `expected_fs::u8path` | ✅ |
+| `std::hash<std::filesystem::path>` | `std::hash<expected_fs::path>` alias | ✅ |
+| `std::formatter<std::filesystem::path>` | Not targeted: C++26-only, project is C++23 | ❌ |
+| `std::filesystem::filesystem_error` | `expected_fs::filesystem_error` alias | ✅ |
+| `std::filesystem::directory_entry` | `expected_fs::directory_entry` alias | ✅ |
+| `std::filesystem::directory_entry` constructors | `expected_fs::make_directory_entry` for fallible construction; alias otherwise | ✅ |
+| `std::filesystem::directory_entry::operator=` | `expected_fs::directory_entry` alias | ✅ |
+| `std::filesystem::directory_entry::assign` | `expected_fs::assign(directory_entry&, path)` | ✅ |
+| `std::filesystem::directory_entry::replace_filename` | `expected_fs::replace_filename(directory_entry&, path)` | ✅ |
+| `std::filesystem::directory_entry::refresh` | `expected_fs::refresh(directory_entry&)` | ✅ |
+| `std::filesystem::directory_entry::path`, `operator const path&` | `expected_fs::directory_entry` alias | ✅ |
+| `std::filesystem::directory_entry::exists` | `expected_fs::exists(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_block_file` | `expected_fs::is_block_file(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_character_file` | `expected_fs::is_character_file(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_directory` | `expected_fs::is_directory(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_fifo` | `expected_fs::is_fifo(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_other` | `expected_fs::is_other(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_regular_file` | `expected_fs::is_regular_file(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_socket` | `expected_fs::is_socket(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::is_symlink` | `expected_fs::is_symlink(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::file_size` | `expected_fs::file_size(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::hard_link_count` | `expected_fs::hard_link_count(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::last_write_time` | `expected_fs::last_write_time(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry::status`, `symlink_status` | `expected_fs::status(directory_entry)`, `expected_fs::symlink_status(directory_entry)` | ✅ |
+| `std::filesystem::directory_entry` comparison operators | `expected_fs::directory_entry` alias | ✅ |
+| `std::filesystem::operator<<` for `directory_entry` | `expected_fs::directory_entry` alias / ADL | ✅ |
+| `std::filesystem::directory_iterator` | `expected_fs::directory_iterator` alias | ✅ |
+| `std::filesystem::directory_iterator` constructors | `expected_fs::make_directory_iterator` for fallible construction; alias otherwise | ✅ |
+| `std::filesystem::directory_iterator::operator*`, `operator->`, `operator=` | `expected_fs::directory_iterator` alias | ✅ |
+| `std::filesystem::directory_iterator::increment`, `operator++` | `expected_fs::increment(directory_iterator&)` for fallible increment; alias otherwise | ✅ |
+| `std::filesystem::begin/end(directory_iterator)` | `expected_fs::begin/end(directory_iterator)` | ✅ |
+| `std::ranges` iterator helper specializations for `directory_iterator` | `expected_fs::directory_iterator` alias | ✅ |
+| `std::filesystem::recursive_directory_iterator` | `expected_fs::recursive_directory_iterator` alias | ✅ |
+| `std::filesystem::recursive_directory_iterator` constructors | `expected_fs::make_recursive_directory_iterator` for fallible construction; alias otherwise | ✅ |
+| `std::filesystem::recursive_directory_iterator::operator*`, `operator->`, `operator=` | `expected_fs::recursive_directory_iterator` alias | ✅ |
+| `std::filesystem::recursive_directory_iterator::options` | `expected_fs::options(recursive_directory_iterator)` | ✅ |
+| `std::filesystem::recursive_directory_iterator::depth` | `expected_fs::depth(recursive_directory_iterator)` | ✅ |
+| `std::filesystem::recursive_directory_iterator::recursion_pending` | `expected_fs::recursion_pending(recursive_directory_iterator)` | ✅ |
+| `std::filesystem::recursive_directory_iterator::increment`, `operator++` | `expected_fs::increment(recursive_directory_iterator&)` for fallible increment; alias otherwise | ✅ |
+| `std::filesystem::recursive_directory_iterator::pop` | `expected_fs::pop(recursive_directory_iterator&)` | ✅ |
+| `std::filesystem::recursive_directory_iterator::disable_recursion_pending` | `expected_fs::disable_recursion_pending(recursive_directory_iterator&)` | ✅ |
+| `std::filesystem::begin/end(recursive_directory_iterator)` | `expected_fs::begin/end(recursive_directory_iterator)` | ✅ |
+| `std::ranges` iterator helper specializations for `recursive_directory_iterator` | `expected_fs::recursive_directory_iterator` alias | ✅ |
+| `std::filesystem::file_status` | `expected_fs::file_status` alias | ✅ |
+| `std::filesystem::space_info` | `expected_fs::space_info` alias | ✅ |
+| `std::filesystem::file_type` | `expected_fs::file_type` alias | ✅ |
+| `std::filesystem::file_time_type` | `expected_fs::file_time_type` alias | ✅ |
+| `std::filesystem::perms` | `expected_fs::perms` alias | ✅ |
+| `std::filesystem::perm_options` | `expected_fs::perm_options` alias | ✅ |
+| `std::filesystem::copy_options` | `expected_fs::copy_options` alias | ✅ |
+| `std::filesystem::directory_options` | `expected_fs::directory_options` alias | ✅ |
+| `std::filesystem::absolute` | `expected_fs::absolute` | ✅ |
+| `std::filesystem::canonical` | `expected_fs::canonical` | ✅ |
+| `std::filesystem::weakly_canonical` | `expected_fs::weakly_canonical` | ✅ |
+| `std::filesystem::relative` | `expected_fs::relative` | ✅ |
+| `std::filesystem::proximate` | `expected_fs::proximate` | ✅ |
+| `std::filesystem::copy` | `expected_fs::copy` | ✅ |
+| `std::filesystem::copy_file` | `expected_fs::copy_file` | ✅ |
+| `std::filesystem::copy_symlink` | `expected_fs::copy_symlink` | ✅ |
+| `std::filesystem::create_directory` | `expected_fs::create_directory` | ✅ |
+| `std::filesystem::create_directories` | `expected_fs::create_directories` | ✅ |
+| `std::filesystem::create_hard_link` | `expected_fs::create_hard_link` | ✅ |
+| `std::filesystem::create_symlink` | `expected_fs::create_symlink` | ✅ |
+| `std::filesystem::create_directory_symlink` | `expected_fs::create_directory_symlink` | ✅ |
+| `std::filesystem::current_path` | `expected_fs::current_path` | ✅ |
+| `std::filesystem::temp_directory_path` | `expected_fs::temp_directory_path` | ✅ |
+| `std::filesystem::exists` | `expected_fs::exists` | ✅ |
+| `std::filesystem::equivalent` | `expected_fs::equivalent` | ✅ |
+| `std::filesystem::file_size` | `expected_fs::file_size` | ✅ |
+| `std::filesystem::hard_link_count` | `expected_fs::hard_link_count` | ✅ |
+| `std::filesystem::last_write_time` | `expected_fs::last_write_time` | ✅ |
+| `std::filesystem::permissions` | `expected_fs::permissions` | ✅ |
+| `std::filesystem::read_symlink` | `expected_fs::read_symlink` | ✅ |
+| `std::filesystem::remove` | `expected_fs::remove` | ✅ |
+| `std::filesystem::remove_all` | `expected_fs::remove_all` | ✅ |
+| `std::filesystem::rename` | `expected_fs::rename` | ✅ |
+| `std::filesystem::resize_file` | `expected_fs::resize_file` | ✅ |
+| `std::filesystem::space` | `expected_fs::space` | ✅ |
+| `std::filesystem::status` | `expected_fs::status` | ✅ |
+| `std::filesystem::symlink_status` | `expected_fs::symlink_status` | ✅ |
+| `std::filesystem::is_block_file` | `expected_fs::is_block_file` | ✅ |
+| `std::filesystem::is_character_file` | `expected_fs::is_character_file` | ✅ |
+| `std::filesystem::is_directory` | `expected_fs::is_directory` | ✅ |
+| `std::filesystem::is_empty` | `expected_fs::is_empty` | ✅ |
+| `std::filesystem::status_known` | `expected_fs::status_known` | ✅ |
+| `std::filesystem::is_fifo` | `expected_fs::is_fifo` | ✅ |
+| `std::filesystem::is_other` | `expected_fs::is_other` | ✅ |
+| `std::filesystem::is_regular_file` | `expected_fs::is_regular_file` | ✅ |
+| `std::filesystem::is_socket` | `expected_fs::is_socket` | ✅ |
+| `std::filesystem::is_symlink` | `expected_fs::is_symlink` | ✅ |
+
+## Building And Testing
 
 ```bash
 cmake -S . -B build \
@@ -56,69 +183,33 @@ cmake -S . -B build \
   -DCPM_SOURCE_CACHE=$HOME/.cache/CPM
 
 cmake --build build
+ctest --test-dir build -C Debug -VV
 cmake --build build --target install
 ```
 
-`CPM_SOURCE_CACHE` is optional, but strongly recommended for faster repeated builds and CI runs.
-
-If you only want to build the library without tests:
+To configure without tests:
 
 ```bash
 cmake -S . -B build \
-  -DCMAKE_INSTALL_PREFIX=/absolute/path/to/install \
-  -DCPM_SOURCE_CACHE=$HOME/.cache/CPM \
-  -DProject_ENABLE_UNIT_TESTING=OFF
+  -Dexpected_fs_ENABLE_UNIT_TESTING=OFF \
+  -DCMAKE_INSTALL_PREFIX=/absolute/path/to/install
 ```
 
-## Testing
+## CMake Integration
 
-Unit testing is enabled by default and uses **Catch2 v3** through CPM. No preinstalled Catch2 package is required.
+After installation:
 
-```bash
-cmake -S . -B build -DCPM_SOURCE_CACHE=$HOME/.cache/CPM
-cmake --build build
-ctest --test-dir build -C Debug -VV
+```cmake
+find_package(expected_fs CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE expected_fs::expected_fs)
 ```
 
-If you prefer to skip tests entirely:
+Since this is header-only, linking the target only provides include directories,
+compile features, and warning settings.
 
-```bash
-cmake -S . -B build -DProject_ENABLE_UNIT_TESTING=OFF
-```
+## Development
 
-## Documentation
-
-Enable Doxygen and build the `doxygen-docs` target:
-
-```bash
-cmake -S . -B build \
-  -DProject_ENABLE_DOXYGEN=ON \
-  -DProject_ENABLE_UNIT_TESTING=OFF
-
-cmake --build build --target doxygen-docs
-```
-
-This generates documentation under `docs/`.
-
-## Common Options
-
-The main project options live in [cmake/StandardSettings.cmake](cmake/StandardSettings.cmake).
-
-Useful examples:
-
-* `Project_BUILD_EXECUTABLE=ON`
-* `Project_BUILD_HEADERS_ONLY=ON`
-* `Project_ENABLE_UNIT_TESTING=OFF`
-* `Project_ENABLE_CLANG_TIDY=ON`
-* `Project_ENABLE_CPPCHECK=ON`
-* `Project_ENABLE_CODE_COVERAGE=ON`
-* `Project_ENABLE_DOXYGEN=ON`
-* `Project_ENABLE_LTO=ON`
-* `Project_ENABLE_ASAN=ON`
-
-## Make Targets
-
-The included [Makefile](Makefile) provides shortcuts for local development:
+Useful local shortcuts:
 
 * `make test`
 * `make coverage`
@@ -126,33 +217,9 @@ The included [Makefile](Makefile) provides shortcuts for local development:
 * `make install`
 * `make format`
 
-These targets use a local `.cpm-cache/` directory automatically.
-
-## Continuous Integration
-
-GitHub Actions workflows are included for:
-
-* Ubuntu build, test, coverage, and install
-* macOS build, test, and install
-* Windows build, test, and install
-* Tagged release archives
-
-All workflows cache `CPM_SOURCE_CACHE` so Catch2 and future CPM-managed dependencies are reused across runs.
-
-To skip CI on a particular commit, include either `[skip ci]` or `[ci skip]` in the commit message.
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and pull request guidelines.
-
-## Versioning
-
-This project follows [SemVer](https://semver.org/).
-
-## Authors
-
-* **Filip-Ioan Dutescu** - [@filipdutescu](https://github.com/filipdutescu)
+The project uses Catch2 through CPM.cmake for tests.
 
 ## License
 
-This template is licensed under the [Unlicense](https://unlicense.org/). See [LICENSE](LICENSE) for details.
+This project is licensed under the Unlicense. See [LICENSE](LICENSE) for
+details.
