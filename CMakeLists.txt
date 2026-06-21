@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.25)
 #
 
 project(
-  "Project"
+  "expected_fs"
   VERSION 0.1.0
   LANGUAGES CXX
 )
@@ -22,6 +22,8 @@ include(cmake/CPM.cmake)
 include(cmake/ProjectStandard.cmake)
 
 project_detect_cxx_standard(PROJECT_CXX_STANDARD)
+set(${PROJECT_NAME}_BUILD_HEADERS_ONLY ON CACHE BOOL "expected_fs is a header-only library." FORCE)
+set(${PROJECT_NAME}_BUILD_EXECUTABLE OFF CACHE BOOL "expected_fs does not build an executable." FORCE)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug")
 endif()
@@ -107,13 +109,15 @@ else()
   endif()
 endif()
 
-set_target_properties(
-  ${PROJECT_NAME}
-  PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
-  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}"
-)
+if(NOT ${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+  set_target_properties(
+    ${PROJECT_NAME}
+    PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}"
+  )
+endif()
 if(${PROJECT_NAME}_BUILD_EXECUTABLE AND ${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   set_target_properties(
     ${PROJECT_NAME}_LIB
@@ -322,6 +326,8 @@ configure_package_config_file(
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION
   ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+  PATH_VARS
+  CMAKE_INSTALL_INCLUDEDIR
 )
 
 install(

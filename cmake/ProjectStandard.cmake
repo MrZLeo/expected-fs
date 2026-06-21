@@ -1,15 +1,11 @@
 function(project_detect_cxx_standard out_var)
-  if("cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    set(_project_cxx_standard 26)
-  elseif("cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  if("cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     set(_project_cxx_standard 23)
-  elseif("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    set(_project_cxx_standard 20)
   else()
     message(
       FATAL_ERROR
-      "Compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} does not support C++20. "
-      "Please use a compiler with at least C++20 support."
+      "expected_fs requires C++23. "
+      "Compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} does not provide cxx_std_23."
     )
   endif()
 

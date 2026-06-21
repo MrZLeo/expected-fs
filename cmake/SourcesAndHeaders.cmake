@@ -1,16 +1,11 @@
-set(sources
-    src/tmp.cpp
-)
+set(sources)
 
-set(exe_sources
-		src/main.cpp
-		${sources}
-)
+set(exe_sources)
 
 set(headers
-    include/project/tmp.hpp
+    include/expected_fs/expected_fs.hpp
 )
 
 set(test_sources
-  src/tmp_test.cpp
+  src/expected_fs_test.cpp
 )
