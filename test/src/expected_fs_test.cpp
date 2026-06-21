@@ -343,9 +343,20 @@ TEST_CASE("expected_fs wraps directory_entry operations", "[filesystem]")
   REQUIRE(expected_fs::assign(*entry, first).has_value());
   REQUIRE(entry->path() == first);
 
-  const auto missing_entry = expected_fs::make_directory_entry(directory.path() / "missing.txt");
-  REQUIRE_FALSE(missing_entry.has_value());
-  REQUIRE(missing_entry.error().value() != 0);
+  const auto missing_path = directory.path() / "missing.txt";
+  std::error_code expected_missing_error;
+  const fs::directory_entry expected_missing_entry{missing_path, expected_missing_error};
+
+  const auto missing_entry = expected_fs::make_directory_entry(missing_path);
+  REQUIRE(missing_entry.has_value() == !static_cast<bool>(expected_missing_error));
+  if(expected_missing_error)
+  {
+    REQUIRE(missing_entry.error() == expected_missing_error);
+  }
+  else
+  {
+    REQUIRE(missing_entry->path() == expected_missing_entry.path());
+  }
 }
 
 TEST_CASE("expected_fs wraps directory operations", "[filesystem]")
