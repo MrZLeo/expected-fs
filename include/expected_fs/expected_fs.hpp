@@ -16,6 +16,12 @@
 #include <system_error>
 #include <utility>
 
+#if defined(__cpp_lib_format_path) && (__cpp_lib_format_path >= 202403L)
+#define EXPECTED_FS_HAS_FORMAT_PATH 1
+#else
+#define EXPECTED_FS_HAS_FORMAT_PATH 0
+#endif
+
 #if !defined(__cpp_lib_expected) || (__cpp_lib_expected < 202202L)
 #error "expected_fs requires C++23 <expected> support."
 #else
@@ -38,6 +44,8 @@ using space_info = std::filesystem::space_info;
 
 template <class T, class E = std::error_code>
 using expected = std::expected<T, E>;
+
+inline constexpr bool has_format_path = EXPECTED_FS_HAS_FORMAT_PATH != 0;
 
 namespace detail {
 template <class T>

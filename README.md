@@ -1,16 +1,19 @@
 # expected_fs
 
-`expected_fs` is a header-only C++23 wrapper around `std::filesystem` that returns
-`std::expected<T, std::error_code>` instead of throwing `std::filesystem_error`
-for ordinary filesystem failures.
+`expected_fs` is a header-only C++23-or-newer wrapper around `std::filesystem`
+that returns `std::expected<T, std::error_code>` instead of throwing
+`std::filesystem_error` for ordinary filesystem failures.
 
 ## Requirements
 
 * CMake 3.25+
-* A C++23 compiler and standard library with `<expected>` support
+* A C++23-or-newer compiler and standard library with `<expected>` support
 
 C++20 is not supported in v1. Configure or compile with a C++20-only toolchain
-will fail with a clear diagnostic.
+will fail with a clear diagnostic. CMake selects C++26 when the compiler exposes
+`cxx_std_26`; otherwise it falls back to C++23. C++26-only filesystem facilities
+are enabled only when the standard library advertises the corresponding feature
+test macro.
 
 ## Usage
 
@@ -60,6 +63,10 @@ Coverage is tracked against the cppreference filesystem index and the linked
 Rows marked as aliases are exposed through the corresponding standard type, so
 the native member functions and operators remain available. Fallible constructors
 cannot return `expected`, so they use `make_*` factory functions.
+C++26-only rows are feature-gated; `std::formatter<std::filesystem::path>` is
+available through `expected_fs::path` when `EXPECTED_FS_HAS_FORMAT_PATH` is `1`
+(`__cpp_lib_format_path >= 202403L`), and the same condition is exposed as
+`expected_fs::has_format_path`.
 
 | std | expected_fs | Status |
 | --- | --- | --- |
@@ -86,7 +93,7 @@ cannot return `expected`, so they use `make_*` factory functions.
 | `std::filesystem::hash_value(path)` | `expected_fs::hash_value(path)` | ✅ |
 | `std::filesystem::u8path` | `expected_fs::u8path` | ✅ |
 | `std::hash<std::filesystem::path>` | `std::hash<expected_fs::path>` alias | ✅ |
-| `std::formatter<std::filesystem::path>` | Not targeted: C++26-only, project is C++23 | ❌ |
+| `std::formatter<std::filesystem::path>` | `std::formatter<expected_fs::path>` when `EXPECTED_FS_HAS_FORMAT_PATH` is `1` | ✅ |
 | `std::filesystem::filesystem_error` | `expected_fs::filesystem_error` alias | ✅ |
 | `std::filesystem::directory_entry` | `expected_fs::directory_entry` alias | ✅ |
 | `std::filesystem::directory_entry` constructors | `expected_fs::make_directory_entry` for fallible construction; alias otherwise | ✅ |

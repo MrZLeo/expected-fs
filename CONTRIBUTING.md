@@ -12,7 +12,8 @@ cmake --build build
 ctest --test-dir build -VV
 ```
 
-The project requires C++23 with `<expected>` support.
+The project requires C++23 or newer with `<expected>` support. C++26-only
+standard library facilities must be guarded by their feature-test macros.
 
 ## Guidelines
 
@@ -31,7 +32,7 @@ Use [PULL_REQUEST_TEMPLATE.md](PULL_REQUEST_TEMPLATE.md) and include:
 * The problem being solved.
 * The relevant API behavior.
 * The commands used to build and test.
-* Any compatibility concerns for C++23 compilers or standard libraries.
+* Any compatibility concerns for C++23/C++26 compilers or standard libraries.
 
 To skip CI for documentation-only commits, include `[skip ci]` or `[ci skip]` in
 the commit message.

@@ -1,10 +1,12 @@
 function(project_detect_cxx_standard out_var)
-  if("cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  if("cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    set(_project_cxx_standard 26)
+  elseif("cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     set(_project_cxx_standard 23)
   else()
     message(
       FATAL_ERROR
-      "expected_fs requires C++23. "
+      "expected_fs requires C++23 or newer. "
       "Compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} does not provide cxx_std_23."
     )
   endif()

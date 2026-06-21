@@ -5,6 +5,9 @@
 #include <chrono>
 #include <expected>
 #include <filesystem>
+#if EXPECTED_FS_HAS_FORMAT_PATH
+#include <format>
+#endif
 #include <fstream>
 #include <set>
 #include <stdexcept>
@@ -100,6 +103,11 @@ TEST_CASE("expected_fs exposes std::expected compatible types", "[api]")
   static_assert(std::is_same_v<expected_fs::space_info, std::filesystem::space_info>);
   static_assert(std::is_same_v<expected_fs::expected<int>, std::expected<int, std::error_code>>);
   static_assert(std::is_same_v<expected_fs::expected<int, std::errc>, std::expected<int, std::errc>>);
+#if EXPECTED_FS_HAS_FORMAT_PATH
+  static_assert(expected_fs::has_format_path);
+#else
+  static_assert(!expected_fs::has_format_path);
+#endif
   static_assert(
     std::is_same_v<decltype(expected_fs::exists(std::declval<const fs::path&>())), expected_fs::expected<bool>>);
   static_assert(std::is_same_v<decltype(expected_fs::exists(std::declval<fs::file_status>())), bool>);
@@ -178,6 +186,17 @@ TEST_CASE("expected_fs exposes std::expected compatible types", "[api]")
                    bool>);
 
   REQUIRE(true);
+}
+
+TEST_CASE("expected_fs exposes C++26 path formatting when available", "[api]")
+{
+#if EXPECTED_FS_HAS_FORMAT_PATH
+  const auto formatted = std::format("{}", expected_fs::path{"expected_fs.txt"});
+  REQUIRE_FALSE(formatted.empty());
+  REQUIRE(formatted.find("expected_fs") != std::string::npos);
+#else
+  REQUIRE_FALSE(expected_fs::has_format_path);
+#endif
 }
 
 TEST_CASE("expected_fs wraps common file operations", "[filesystem]")

@@ -23,5 +23,5 @@ List the exact commands you ran.
 * [ ] Tests were added or updated where appropriate.
 * [ ] Documentation was updated where appropriate.
 * [ ] The change keeps `expected_fs` header-only.
-* [ ] The change requires only C++23 standard library facilities.
+* [ ] The change works on C++23, and any C++26-only standard library facility is feature-gated.
 * [ ] I agree to contribute this change under the Unlicense.
