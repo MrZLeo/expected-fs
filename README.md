@@ -228,5 +228,5 @@ The project uses Catch2 through CPM.cmake for tests.
 
 ## License
 
-This project is licensed under the Unlicense. See [LICENSE](LICENSE) for
+This project is licensed under the BSD 3-Clause. See [LICENSE](LICENSE) for
 details.
