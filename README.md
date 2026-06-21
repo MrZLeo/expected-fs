@@ -23,11 +23,9 @@ test macro.
 #include <filesystem>
 #include <iostream>
 
-int main()
-{
+int main() {
   const auto size = expected_fs::file_size("data.txt");
-  if(!size)
-  {
+  if (!size) {
     std::cerr << size.error().message() << '\n';
     return 1;
   }
