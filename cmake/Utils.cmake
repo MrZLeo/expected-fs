@@ -14,27 +14,30 @@ endfunction()
 
 function(add_clang_format_target)
     if(NOT ${PROJECT_NAME}_CLANG_FORMAT_BINARY)
-			find_program(${PROJECT_NAME}_CLANG_FORMAT_BINARY clang-format)
+        find_program(${PROJECT_NAME}_CLANG_FORMAT_BINARY clang-format)
     endif()
 
     if(${PROJECT_NAME}_CLANG_FORMAT_BINARY)
-			if(${PROJECT_NAME}_BUILD_EXECUTABLE)
-				add_custom_target(clang-format
-						COMMAND ${${PROJECT_NAME}_CLANG_FORMAT_BINARY}
-						-i ${exe_sources} ${headers}
-						WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-			elseif(${PROJECT_NAME}_BUILD_HEADERS_ONLY)
-				add_custom_target(clang-format
-						COMMAND ${${PROJECT_NAME}_CLANG_FORMAT_BINARY}
-						-i ${headers}
-						WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-			else()
-				add_custom_target(clang-format
-						COMMAND ${${PROJECT_NAME}_CLANG_FORMAT_BINARY}
-						-i ${sources} ${headers}
-						WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-			endif()
+        set(format_sources ${headers})
+        if(${PROJECT_NAME}_BUILD_EXECUTABLE)
+            list(APPEND format_sources ${exe_sources})
+        elseif(NOT ${PROJECT_NAME}_BUILD_HEADERS_ONLY)
+            list(APPEND format_sources ${sources})
+        endif()
 
-			message(STATUS "Format the project using the `clang-format` target (i.e: cmake --build build --target clang-format).\n")
+        foreach(test_source IN LISTS test_sources)
+            if(IS_ABSOLUTE "${test_source}")
+                list(APPEND format_sources "${test_source}")
+            else()
+                list(APPEND format_sources "test/${test_source}")
+            endif()
+        endforeach()
+
+        add_custom_target(clang-format
+            COMMAND ${${PROJECT_NAME}_CLANG_FORMAT_BINARY}
+            -i ${format_sources}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+        message(STATUS "Format the project using the `clang-format` target (i.e: cmake --build build --target clang-format).\n")
     endif()
 endfunction()
