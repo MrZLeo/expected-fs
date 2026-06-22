@@ -28,5 +28,5 @@ function(project_apply_cxx_standard target visibility)
       CXX_EXTENSIONS OFF
   )
 
-  target_compile_features(${target} ${visibility} cxx_std_${PROJECT_CXX_STANDARD})
+  target_compile_features(${target} ${visibility} cxx_std_23)
 endfunction()

@@ -10,6 +10,7 @@ option(${PROJECT_NAME}_USE_ALT_NAMES "Use alternative names for the project, suc
 # Compiler options
 #
 
+option(${PROJECT_NAME}_ENABLE_WARNINGS "Enable compiler warning flags." ${PROJECT_IS_TOP_LEVEL})
 option(${PROJECT_NAME}_WARNINGS_AS_ERRORS "Treat compiler warnings as errors." OFF)
 
 #

@@ -2,6 +2,7 @@
 .cpm-cache/*
 [Dd]ocs/*
 CMakeCache.*
+CMakeUserPresets.json
 CMakeFiles/*
 [Tt]esting/*
 

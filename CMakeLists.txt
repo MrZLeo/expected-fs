@@ -143,8 +143,10 @@ else()
   endif()
 endif()
 include(cmake/CompilerWarnings.cmake)
-set_project_warnings(${PROJECT_NAME})
-verbose_message("Applied compiler warnings. Using standard C++${PROJECT_CXX_STANDARD}.\n")
+if(${PROJECT_NAME}_ENABLE_WARNINGS)
+  set_project_warnings(${PROJECT_NAME})
+  verbose_message("Applied compiler warnings. Using standard C++${PROJECT_CXX_STANDARD}.\n")
+endif()
 
 #
 # Enable Doxygen
@@ -242,7 +244,9 @@ verbose_message("Project is now aliased as ${PROJECT_NAME}::${PROJECT_NAME}.\n")
 # Format the project using the `clang-format` target (i.e: cmake --build build --target clang-format)
 #
 
-add_clang_format_target()
+if(PROJECT_IS_TOP_LEVEL)
+  add_clang_format_target()
+endif()
 
 #
 # Install library for easy downstream inclusion

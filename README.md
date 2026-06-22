@@ -51,6 +51,19 @@ template <class T, class E = std::error_code>
 using expected = std::expected<T, E>;
 ```
 
+## Header-Only Use
+
+`expected_fs` is distributed as a single public header. For the simplest
+integration path, copy `include/expected_fs/expected_fs.hpp` into your project
+and include it directly:
+
+```cpp
+#include <expected_fs/expected_fs.hpp>
+```
+
+The header requires C++23 `<expected>` support and does not require linking an
+additional library.
+
 ## API Coverage
 
 Coverage is tracked against the cppreference filesystem index and the linked
@@ -210,7 +223,34 @@ target_link_libraries(your_target PRIVATE expected_fs::expected_fs)
 ```
 
 Since this is header-only, linking the target only provides include directories,
-compile features, and warning settings.
+and compile features.
+
+### FetchContent
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+  expected_fs
+  GIT_REPOSITORY https://github.com/MrZLeo/expected-fs.git
+  GIT_TAG v0.1.0
+)
+FetchContent_MakeAvailable(expected_fs)
+
+target_link_libraries(your_target PRIVATE expected_fs::expected_fs)
+```
+
+### CPM.cmake
+
+```cmake
+CPMAddPackage(
+  NAME expected_fs
+  GITHUB_REPOSITORY MrZLeo/expected-fs
+  GIT_TAG v0.1.0
+)
+
+target_link_libraries(your_target PRIVATE expected_fs::expected_fs)
+```
 
 ## Development
 
