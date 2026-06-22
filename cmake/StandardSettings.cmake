@@ -17,7 +17,7 @@ option(${PROJECT_NAME}_WARNINGS_AS_ERRORS "Treat compiler warnings as errors." O
 #
 # This template uses Catch2 via CPM.cmake when tests are enabled.
 
-option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests for the projects (from the `test` subfolder)." ON)
+option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests for the projects (from the `test` subfolder)." ${PROJECT_IS_TOP_LEVEL})
 
 #
 # Static analyzers

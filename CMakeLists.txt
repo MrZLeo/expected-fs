@@ -18,7 +18,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "") # works
 include(cmake/StandardSettings.cmake)
 include(cmake/StaticAnalyzers.cmake)
 include(cmake/Utils.cmake)
-include(cmake/CPM.cmake)
 include(cmake/ProjectStandard.cmake)
 
 project_detect_cxx_standard(PROJECT_CXX_STANDARD)

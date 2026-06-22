@@ -11,6 +11,8 @@ project(
 
 verbose_message("Adding tests under ${CMAKE_PROJECT_NAME}Tests...")
 
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/CPM.cmake)
+
 CPMAddPackage(
   NAME Catch2
   GITHUB_REPOSITORY catchorg/Catch2
