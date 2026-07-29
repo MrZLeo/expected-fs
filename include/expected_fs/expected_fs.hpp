@@ -996,6 +996,14 @@ template <class Fs>
 using forwarding_fs_t = std::conditional_t<std::is_lvalue_reference_v<Fs>, Fs,
                                            std::remove_cvref_t<Fs>>;
 
+template <class Fs>
+using default_result_adaptor_t =
+    result_adaptor<forwarding_fs_t<Fs>, std_result_policy<>>;
+
+template <class Tag, class Fs, class... Args>
+concept policy_tag_invocable =
+    tag_invocable<Tag, default_result_adaptor_t<Fs>, Args...>;
+
 using default_fs_lvalue_t = const std_fs_t &;
 
 template <class Fs>
@@ -1160,8 +1168,23 @@ public:
   template <class Fs, class... Args>
     requires(!adaptor_closure<Fs>)
          && (!result_adaptor_instance<Fs>)
+         && (!tag_invocable<Derived, Fs, Args...>)
+         && policy_tag_invocable<Derived, Fs, Args...>
+  [[nodiscard]] constexpr decltype(auto)
+  operator()(Fs &&fs, Args &&...args) const {
+    default_result_adaptor_t<Fs> adaptor{
+        std::forward<Fs>(fs),
+    };
+    return tag_invoke(Derived{}, std::move(adaptor),
+                      std::forward<Args>(args)...);
+  }
+
+  template <class Fs, class... Args>
+    requires(!adaptor_closure<Fs>)
+         && (!result_adaptor_instance<Fs>)
          && filesystem_traits<Fs>
          && (!tag_invocable<Derived, Fs, Args...>)
+         && (!policy_tag_invocable<Derived, Fs, Args...>)
          && raw_ops_invocable<Derived, Fs, Args...>
   // The selected backend is deliberately observed as an lvalue for the
   // duration of the operation, matching result-adaptor dispatch.
@@ -1179,14 +1202,12 @@ public:
          && (!result_adaptor_instance<Fs>)
          && filesystem_traits<Fs>
          && (!tag_invocable<Derived, Fs, Args...>)
+         && (!policy_tag_invocable<Derived, Fs, Args...>)
          && (!raw_ops_invocable<Derived, Fs, Args...>)
-         && ops_invocable<
-                Derived,
-                result_adaptor<forwarding_fs_t<Fs>, std_result_policy<>>,
-                Args...>
+         && ops_invocable<Derived, default_result_adaptor_t<Fs>, Args...>
   [[nodiscard]] constexpr decltype(auto)
   operator()(Fs &&fs, Args &&...args) const {
-    result_adaptor<forwarding_fs_t<Fs>, std_result_policy<>> adaptor{
+    default_result_adaptor_t<Fs> adaptor{
         std::forward<Fs>(fs),
     };
     return invoke_ops(Derived{}, adaptor, std::forward<Args>(args)...);
@@ -1196,12 +1217,11 @@ public:
     requires(!tag_invocable<Derived, Args...>)
          && (!starts_with_explicit_dispatch_argument_v<Args...>)
          && (tag_invocable<Derived, default_fs_lvalue_t, Args...>
+             || policy_tag_invocable<Derived, default_fs_lvalue_t, Args...>
              || raw_ops_invocable<Derived, default_fs_lvalue_t, Args...>
-             || ops_invocable<
-                 Derived,
-                 result_adaptor<forwarding_fs_t<default_fs_lvalue_t>,
-                                std_result_policy<>>,
-                 Args...>)
+             || ops_invocable<Derived,
+                              default_result_adaptor_t<default_fs_lvalue_t>,
+                              Args...>)
   [[nodiscard]] constexpr decltype(auto) operator()(Args &&...args) const
       noexcept(noexcept(Derived{}(std_fs, std::forward<Args>(args)...))) {
     return Derived{}(std_fs, std::forward<Args>(args)...);
@@ -1383,33 +1403,6 @@ struct with_policy_t {
 
 template <class Policy>
 inline constexpr with_policy_t<Policy> with_policy{};
-
-template <class Tag, class... Args>
-  requires detail::tag_invocable<
-      Tag, result_adaptor<std_fs_t, std_result_policy<>>, Args...>
-[[nodiscard]] inline decltype(auto)
-tag_invoke(Tag tag, std_fs_t fs, Args &&...args) {
-  return tag_invoke(tag, result_adaptor<std_fs_t, std_result_policy<>>{fs},
-                    std::forward<Args>(args)...);
-}
-
-template <class Tag, class Fs, class... Args>
-  requires(!std::same_as<std::remove_cvref_t<Fs>, std_fs_t>)
-       && (!detail::adaptor_closure<Fs>)
-       && (!detail::result_adaptor_instance<Fs>)
-       && detail::tag_invocable<
-              Tag,
-              result_adaptor<detail::forwarding_fs_t<Fs>, std_result_policy<>>,
-              Args...>
-[[nodiscard]] inline decltype(auto)
-tag_invoke(Tag tag, Fs &&fs, Args &&...args) {
-  return tag_invoke(
-      tag,
-      result_adaptor<detail::forwarding_fs_t<Fs>, std_result_policy<>>{
-          std::forward<Fs>(fs),
-      },
-      std::forward<Args>(args)...);
-}
 
 #define EXPECTED_FS_DEFINE_CPO(name)                                           \
   struct name##_t : detail::cpo_base<name##_t> {                               \

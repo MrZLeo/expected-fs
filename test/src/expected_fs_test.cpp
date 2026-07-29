@@ -1922,13 +1922,15 @@ TEST_CASE("fs_traits ops receive backend state across operation families",
   backend.write_time = fs::file_time_type::clock::now();
   const auto write_time = expected_fs::last_write_time(backend, source);
   REQUIRE(write_time.has_value());
-  REQUIRE(*write_time == backend.write_time);
+  const bool returned_write_time_matches = *write_time == backend.write_time;
+  REQUIRE(returned_write_time_matches);
 
   const auto new_write_time = backend.write_time + std::chrono::seconds{1};
   const auto set_write_time =
       expected_fs::last_write_time(backend, source, new_write_time);
   REQUIRE(set_write_time.has_value());
-  REQUIRE(backend.write_time == new_write_time);
+  const bool updated_write_time_matches = backend.write_time == new_write_time;
+  REQUIRE(updated_write_time_matches);
 
   const auto space = expected_fs::space(backend, source);
   REQUIRE(space.has_value());
