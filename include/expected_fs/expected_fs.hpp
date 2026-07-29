@@ -2108,10 +2108,15 @@ template <class Adaptor>
   requires detail::result_adaptor_instance<Adaptor>
         && requires(Adaptor &adaptor,
                     const fs_path_t<detail::adaptor_fs_t<Adaptor>> &from,
-                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &to) {
+                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &to,
+                    std::error_code &error) {
              fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none;
-             copy_t{}(adaptor, from, to,
-                      fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none);
+             {
+               fs_ops_t<detail::adaptor_fs_t<Adaptor>>::copy(
+                   adaptor.fs, from, to,
+                   fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none,
+                   error)
+             } -> std::same_as<void>;
            }
 [[nodiscard]] inline auto
 ops_invoke(copy_t tag, Adaptor &adaptor,
@@ -2151,11 +2156,15 @@ template <class Adaptor>
   requires detail::result_adaptor_instance<Adaptor>
         && requires(Adaptor &adaptor,
                     const fs_path_t<detail::adaptor_fs_t<Adaptor>> &from,
-                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &to) {
+                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &to,
+                    std::error_code &error) {
              fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none;
-             copy_file_t{}(
-                 adaptor, from, to,
-                 fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none);
+             {
+               fs_ops_t<detail::adaptor_fs_t<Adaptor>>::copy_file(
+                   adaptor.fs, from, to,
+                   fs_copy_options_t<detail::adaptor_fs_t<Adaptor>>::none,
+                   error)
+             } -> std::convertible_to<bool>;
            }
 [[nodiscard]] inline auto
 ops_invoke(copy_file_t tag, Adaptor &adaptor,
@@ -2251,11 +2260,15 @@ template <class Adaptor>
   requires detail::result_adaptor_instance<Adaptor>
         && requires(Adaptor &adaptor,
                     const fs_path_t<detail::adaptor_fs_t<Adaptor>> &value,
-                    fs_perms_t<detail::adaptor_fs_t<Adaptor>> new_permissions) {
+                    fs_perms_t<detail::adaptor_fs_t<Adaptor>> new_permissions,
+                    std::error_code &error) {
              fs_perm_options_t<detail::adaptor_fs_t<Adaptor>>::replace;
-             permissions_t{}(
-                 adaptor, value, new_permissions,
-                 fs_perm_options_t<detail::adaptor_fs_t<Adaptor>>::replace);
+             {
+               fs_ops_t<detail::adaptor_fs_t<Adaptor>>::permissions(
+                   adaptor.fs, value, new_permissions,
+                   fs_perm_options_t<detail::adaptor_fs_t<Adaptor>>::replace,
+                   error)
+             } -> std::same_as<void>;
            }
 [[nodiscard]] inline auto
 ops_invoke(permissions_t tag, Adaptor &adaptor,
