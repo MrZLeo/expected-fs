@@ -1,5 +1,26 @@
 function(project_detect_cxx_standard out_var)
-  if("cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  set(_project_standard_override "${${PROJECT_NAME}_CXX_STANDARD}")
+
+  if(NOT _project_standard_override STREQUAL "")
+    if(NOT _project_standard_override STREQUAL "23" AND
+       NOT _project_standard_override STREQUAL "26")
+      message(
+        FATAL_ERROR
+        "${PROJECT_NAME}_CXX_STANDARD must be either 23 or 26; "
+        "received `${_project_standard_override}`."
+      )
+    endif()
+
+    if(NOT "cxx_std_${_project_standard_override}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+      message(
+        FATAL_ERROR
+        "Compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} "
+        "does not provide cxx_std_${_project_standard_override}."
+      )
+    endif()
+
+    set(_project_cxx_standard ${_project_standard_override})
+  elseif("cxx_std_26" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     set(_project_cxx_standard 26)
   elseif("cxx_std_23" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     set(_project_cxx_standard 23)

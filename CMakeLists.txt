@@ -20,6 +20,14 @@ include(cmake/StaticAnalyzers.cmake)
 include(cmake/Utils.cmake)
 include(cmake/ProjectStandard.cmake)
 
+set(
+  ${PROJECT_NAME}_CXX_STANDARD
+  ""
+  CACHE STRING
+  "Override the automatically selected C++ standard (supported values: 23, 26)."
+)
+set_property(CACHE ${PROJECT_NAME}_CXX_STANDARD PROPERTY STRINGS "" 23 26)
+
 project_detect_cxx_standard(PROJECT_CXX_STANDARD)
 set(${PROJECT_NAME}_BUILD_HEADERS_ONLY ON CACHE BOOL "expected_fs is a header-only library." FORCE)
 set(${PROJECT_NAME}_BUILD_EXECUTABLE OFF CACHE BOOL "expected_fs does not build an executable." FORCE)

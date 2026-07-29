@@ -9,11 +9,13 @@ that returns `std::expected<T, std::error_code>` instead of throwing
 * CMake 3.25+
 * A C++23-or-newer compiler and standard library with `<expected>` support
 
-C++20 is not supported in v1. Configure or compile with a C++20-only toolchain
-will fail with a clear diagnostic. CMake selects C++26 when the compiler exposes
-`cxx_std_26`; otherwise it falls back to C++23. C++26-only filesystem facilities
-are enabled only when the standard library advertises the corresponding feature
-test macro.
+C++20 is not supported in v1. Configuring or compiling with a C++20-only
+toolchain will fail with a clear diagnostic. By default, CMake selects C++26
+when the compiler exposes `cxx_std_26`; otherwise it falls back to C++23. Set
+`expected_fs_CXX_STANDARD` to `23` or `26` to pin that choice explicitly. Other
+values, or a requested standard unsupported by the compiler, fail during
+configuration. C++26-only filesystem facilities are enabled only when the
+standard library advertises the corresponding feature-test macro.
 
 ## Usage
 
@@ -198,7 +200,8 @@ available through `expected_fs::path` when `EXPECTED_FS_HAS_FORMAT_PATH` is `1`
 ```bash
 cmake -S . -B build \
   -DCMAKE_INSTALL_PREFIX=/absolute/path/to/install \
-  -DCPM_SOURCE_CACHE=$HOME/.cache/CPM
+  -DCPM_SOURCE_CACHE=$HOME/.cache/CPM \
+  -Dexpected_fs_CXX_STANDARD=23
 
 cmake --build build
 ctest --test-dir build -C Debug -VV
