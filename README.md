@@ -1,7 +1,7 @@
 # expected_fs
 
 `expected_fs` is a header-only C++23-or-newer wrapper around `std::filesystem`
-that returns `std::expected<T, std::error_code>` instead of throwing
+that returns `std::expected<T, std::error_code>` by default instead of throwing
 `std::filesystem_error` for ordinary filesystem failures.
 
 ## Requirements
@@ -53,6 +53,149 @@ template <class T, class E = std::error_code>
 using expected = std::expected<T, E>;
 ```
 
+All 56 filesystem wrapper names declared directly in `expected_fs` are
+customization point objects (CPOs). Together they cover 94 standard-compatible
+call forms: 72 fallible forms and 22 non-fallible forms. A fallible call such as
+`expected_fs::file_size(p)` uses the built-in `expected_fs::std_fs` filesystem
+backend and `expected_fs::std_result` result domain by default, while explicit
+backend, value, error, and result-domain calls are also supported:
+
+```cpp
+auto size = expected_fs::file_size("data.txt");
+auto typed = expected_fs::file_size(expected_fs::with_value<my_size>,
+                                    "data.txt");
+auto mapped = expected_fs::file_size(expected_fs::with_error<my_error>,
+                                    "data.txt");
+auto typed_mapped =
+    expected_fs::file_size(expected_fs::with_error<my_error>(
+                               expected_fs::with_value<my_size>),
+                           "data.txt");
+auto custom_result = expected_fs::file_size(expected_fs::with_result(my_result),
+                                           "data.txt");
+auto custom = expected_fs::file_size(my_fs, my_path);
+```
+
+Fallible forms produce a result-domain value and support `with_value`,
+`with_error`, and `with_result`. Non-fallible forms, such as
+`expected_fs::status_known(status)` and iterator observers, return their raw
+value; result adapters do not apply to them.
+
+These names are function objects, not ordinary free functions. Existing call
+expressions such as `expected_fs::file_size(p)` remain valid, but code that
+takes a function address, stores a specific overload in a function pointer, or
+otherwise depends on a free-function overload set must be updated. Moving these
+APIs from free functions to customization point objects is therefore a
+source-compatibility change even when ordinary calls are unchanged.
+
+### Custom Filesystem Backends
+
+There are three separate backend customization mechanisms:
+
+* A direct operation override provides `tag_invoke` for an operation tag, such
+  as `expected_fs::file_size_t`, and the backend's arguments. This override owns
+  the complete operation contract, including its return type. It is not
+  automatically rewritten by `with_value`, `with_error`, or `with_result`.
+* A policy-aware backend provides `tag_invoke` for
+  `expected_fs::result_adaptor<Fs, Policy>`. It returns
+  `Policy::result<T>` and constructs outcomes through `Policy::success` and
+  `Policy::failure`. This is the customization to implement when the backend
+  should participate in the fallible `with_*` result adaptations. It does not
+  apply to non-fallible forms.
+* A traits backend specializes `expected_fs::fs_traits<Fs>` with its associated
+  filesystem types and an `ops` type. Each operation implemented by `ops`
+  becomes the fallback for that CPO. Fallible primitives participate in every
+  `with_*` result adaptation; non-fallible primitives return their raw result.
+  Backends may implement the protocol incrementally: only the primitive needed
+  by a call is required.
+
+Every `ops` primitive receives the stored backend as its first argument.
+Fallible primitives additionally receive a `std::error_code&` as their last
+argument; non-fallible primitives do not. This makes the same protocol suitable
+for stateless adapters, in-memory filesystems, remote clients, and stateful test
+doubles. For example, a backend that initially supports only `file_size` can be
+defined as follows:
+
+```cpp
+struct my_ops {
+  static std::uintmax_t file_size(my_fs& fs, const my_path& value,
+                                  std::error_code& error);
+};
+
+template <>
+struct expected_fs::fs_traits<my_fs> {
+  using ops = my_ops;
+  using path = my_path;
+};
+```
+
+The complete protocol mirrors all 94 `expected_fs` wrapper forms, including
+path queries and mutations, status predicates, `directory_entry` operations,
+and both iterator types. Associated enum types supply the convenience-overload
+defaults (`none` for copy/directory options and `replace` for permission
+options). Explicit direct `tag_invoke` customizations always take precedence
+over the traits fallback; policy-aware customizations do so for fallible forms.
+
+The backend-first parameter is part of the protocol. An older experimental
+primitive such as `Ops::file_size(path, error)` must be migrated to
+`Ops::file_size(fs, path, error)`.
+
+For a custom associated type, the explicit backend is also required to reach
+the traits fallback: call `expected_fs::status_known(fs, status)`, for example,
+not `expected_fs::status_known(status)`. The library does not try to infer `Fs`
+by reverse-matching `status` against `fs_file_status_t<Fs>`. The same rule
+applies to every non-fallible associated-value form.
+
+Backends that expose both raw status predicates and fallible path or
+`directory_entry` predicates must use a `file_status` type distinct from their
+`path` and `directory_entry` types. Otherwise calls such as `exists(fs, value)`
+cannot distinguish the raw and fallible forms; an exact `file_status` match is
+treated as the raw form.
+
+When the first argument has an `fs_traits` specialization, it is always treated
+as an explicit backend. If that backend does not implement the requested
+primitive, the expression is ill-formed; it never falls through by converting
+the backend into an argument for `std_fs`.
+
+The default `expected_fs::path`, `expected_fs::directory_iterator`, and related
+aliases are derived from `fs_traits<expected_fs::std_fs_t>`, while
+`expected_fs::fs_path_t<Fs>` and the other `fs_*_t` aliases expose the types
+associated with an explicit backend. Result adapters preserve those associated
+types and only change the result-domain, value, and error policy.
+`with_value<void>` discards the natural success value while preserving errors.
+
+Result adapters created from a backend own a decayed copy of that backend by
+default, including when the source backend is an lvalue. Use `std::ref(fs)` or
+`std::cref(fs)` explicitly to create a borrowing adapter instead:
+
+```cpp
+#include <functional>
+
+auto owned = expected_fs::with_error<my_error>(my_fs);
+auto borrowed = expected_fs::with_error<my_error>(std::ref(my_fs));
+auto borrowed_const = expected_fs::with_error<my_error>(std::cref(my_fs));
+```
+
+A borrowed backend must outlive the adapter and every operation performed
+through it. Borrowing does not add synchronization: the caller remains
+responsible for the backend's thread-safety and for coordinating shared mutable
+state.
+
+### Custom Result Domains
+
+Third-party expected implementations can be integrated through a minimal,
+stateless result-domain protocol:
+
+* specialize `expected_fs::result_domain_traits<Domain>` with a
+  `result<T, E>` alias;
+* provide `tag_invoke` overloads for `expected_fs::result_success_t`, including
+  the `void` success form; and
+* provide a `tag_invoke` overload for `expected_fs::result_failure_t`.
+
+No result observer hooks are required. A domain is a type-level tag: it must be
+default-constructible, and state from an object passed to `with_result` is not
+retained. Use `expected_fs::with_policy<Policy>` as the low-level escape hatch
+for unusual result types or behavior that does not fit this stateless protocol.
+
 ## Header-Only Use
 
 `expected_fs` is distributed as a single public header. For the simplest
@@ -73,9 +216,13 @@ Coverage is tracked against the cppreference filesystem index and the linked
 `recursive_directory_iterator` pages:
 <https://en.cppreference.com/w/cpp/filesystem>.
 
-Rows marked as aliases are exposed through the corresponding standard type, so
-the native member functions and operators remain available. Fallible constructors
-cannot return `expected`, so they use `make_*` factory functions.
+All 56 directly named `expected_fs` filesystem wrappers in the table are CPOs;
+they represent 94 forms (72 fallible and 22 non-fallible). Rows marked as
+aliases instead expose an associated concrete type, so its native members,
+operators, and ADL functions remain available. Those concrete-type APIs are not
+part of the named-wrapper CPO protocol and are not counted in the 56 names.
+Fallible constructors cannot return `expected`, so they use `make_*` factory
+functions.
 C++26-only rows are feature-gated; `std::formatter<std::filesystem::path>` is
 available through `expected_fs::path` when `EXPECTED_FS_HAS_FORMAT_PATH` is `1`
 (`__cpp_lib_format_path >= 202403L`), and the same condition is exposed as
