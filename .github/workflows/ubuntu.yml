@@ -10,6 +10,7 @@ env:
   BUILD_TYPE: Release
   INSTALL_LOCATION: .local
   CPM_SOURCE_CACHE: ${{ github.workspace }}/.cpm-cache
+  LLVM_VERSION: 22
 
 jobs:
   build:
@@ -36,6 +37,19 @@ jobs:
       run: |
         cd build
         ctest -C $BUILD_TYPE -VV
+
+    - name: install clang tools
+      run: |
+        curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/apt.llvm.org.gpg
+        echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-$LLVM_VERSION main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain.list
+        sudo apt-get update
+        sudo apt-get install -y clang-format-$LLVM_VERSION clang-tidy-$LLVM_VERSION
+
+    - name: check formatting
+      run: clang-format-$LLVM_VERSION --dry-run --Werror include/expected_fs/expected_fs.hpp test/src/expected_fs_test.cpp
+
+    - name: run clang-tidy
+      run: clang-tidy-$LLVM_VERSION -p build test/src/expected_fs_test.cpp --quiet
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v7
