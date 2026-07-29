@@ -2403,11 +2403,16 @@ ops_invoke(make_directory_iterator_t, Adaptor &adaptor,
 template <class Adaptor>
   requires detail::result_adaptor_instance<Adaptor>
         && requires(Adaptor &adaptor,
-                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &value) {
+                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &value,
+                    std::error_code &error) {
              fs_directory_options_t<detail::adaptor_fs_t<Adaptor>>::none;
-             make_directory_iterator_t{}(
-                 adaptor, value,
-                 fs_directory_options_t<detail::adaptor_fs_t<Adaptor>>::none);
+             {
+               fs_ops_t<detail::adaptor_fs_t<Adaptor>>::make_directory_iterator(
+                   adaptor.fs, value,
+                   fs_directory_options_t<detail::adaptor_fs_t<Adaptor>>::none,
+                   error)
+             } -> std::convertible_to<
+                 fs_directory_iterator_t<detail::adaptor_fs_t<Adaptor>>>;
            }
 [[nodiscard]] inline auto
 ops_invoke(make_directory_iterator_t tag, Adaptor &adaptor,
@@ -2468,11 +2473,18 @@ ops_invoke(make_recursive_directory_iterator_t, Adaptor &adaptor,
 template <class Adaptor>
   requires detail::result_adaptor_instance<Adaptor>
         && requires(Adaptor &adaptor,
-                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &value) {
+                    const fs_path_t<detail::adaptor_fs_t<Adaptor>> &value,
+                    std::error_code &error) {
              fs_directory_options_t<detail::adaptor_fs_t<Adaptor>>::none;
-             make_recursive_directory_iterator_t{}(
-                 adaptor, value,
-                 fs_directory_options_t<detail::adaptor_fs_t<Adaptor>>::none);
+             {
+               fs_ops_t<detail::adaptor_fs_t<Adaptor>>::
+                   make_recursive_directory_iterator(
+                       adaptor.fs, value,
+                       fs_directory_options_t<
+                           detail::adaptor_fs_t<Adaptor>>::none,
+                       error)
+             } -> std::convertible_to<fs_recursive_directory_iterator_t<
+                 detail::adaptor_fs_t<Adaptor>>>;
            }
 [[nodiscard]] inline auto
 ops_invoke(make_recursive_directory_iterator_t tag, Adaptor &adaptor,
