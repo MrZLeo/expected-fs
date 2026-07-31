@@ -8,4 +8,5 @@ set(headers
 
 set(test_sources
   src/expected_fs_test.cpp
+  src/tl_expected_integration_test.cpp
 )

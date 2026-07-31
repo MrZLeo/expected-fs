@@ -46,10 +46,10 @@ jobs:
         sudo apt-get install -y clang-format-$LLVM_VERSION clang-tidy-$LLVM_VERSION
 
     - name: check formatting
-      run: clang-format-$LLVM_VERSION --dry-run --Werror include/expected_fs/expected_fs.hpp test/src/expected_fs_test.cpp
+      run: clang-format-$LLVM_VERSION --dry-run --Werror include/expected_fs/expected_fs.hpp test/src/expected_fs_test.cpp test/src/tl_expected_integration_test.cpp
 
     - name: run clang-tidy
-      run: clang-tidy-$LLVM_VERSION -p build test/src/expected_fs_test.cpp --quiet
+      run: clang-tidy-$LLVM_VERSION -p build test/src/expected_fs_test.cpp test/src/tl_expected_integration_test.cpp --quiet
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v7

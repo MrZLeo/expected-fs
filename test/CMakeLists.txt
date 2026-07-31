@@ -23,6 +23,17 @@ CPMAddPackage(
     "CATCH_INSTALL_EXTRAS ON"
 )
 
+CPMAddPackage(
+  NAME tl_expected
+  GITHUB_REPOSITORY TartanLlama/expected
+  VERSION 1.3.1
+  GIT_TAG 1770e3559f2f6ea4a5fb4f577ad22aeb30fbd8e4
+  EXCLUDE_FROM_ALL YES
+  OPTIONS
+    "EXPECTED_BUILD_PACKAGE OFF"
+    "EXPECTED_BUILD_TESTS OFF"
+)
+
 if(DEFINED Catch2_SOURCE_DIR)
   set(CATCH2_EXTRAS_DIR "${Catch2_SOURCE_DIR}/extras")
 elseif(DEFINED catch2_SOURCE_DIR)
@@ -81,6 +92,10 @@ foreach(file ${test_sources})
       Catch2::Catch2WithMain
       ${${CMAKE_PROJECT_NAME}_TEST_LIB}
   )
+
+  if(test_name STREQUAL "tl_expected_integration_test")
+    target_link_libraries(${test_name}_Tests PRIVATE tl::expected)
+  endif()
 
   catch_discover_tests(${test_name}_Tests)
 endforeach()
