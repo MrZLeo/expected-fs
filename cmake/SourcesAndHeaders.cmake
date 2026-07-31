@@ -4,6 +4,7 @@ set(exe_sources)
 
 set(headers
     include/expected_fs/expected_fs.hpp
+    include/expected_fs/result_domains/tl_expected.hpp
 )
 
 set(test_sources

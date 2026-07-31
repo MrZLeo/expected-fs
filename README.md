@@ -180,6 +180,36 @@ through it. Borrowing does not add synchronization: the caller remains
 responsible for the backend's thread-safety and for coordinating shared mutable
 state.
 
+### Built-in Result Domains
+
+The optional `tl::expected` adapter provides a ready-made result domain without
+adding `tl::expected` as a dependency of the core header:
+
+```cpp
+#include <expected_fs/result_domains/tl_expected.hpp>
+
+inline constexpr auto tl_fs = expected_fs::with_result(
+    expected_fs::tl_expected_result, expected_fs::std_fs);
+
+auto size = expected_fs::file_size(tl_fs, "data.txt");
+auto copied = expected_fs::copy_file(tl_fs, "a.txt", "b.txt");
+```
+
+Both results above use `tl::expected`. Calls without the explicit `tl_fs`
+adaptor continue to use `std::expected`, so including the adapter never changes
+the program-wide default.
+
+The consumer must make `tl::expected` available. Its CMake package exports the
+`tl::expected` target:
+
+```cmake
+find_package(tl-expected CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE
+  expected_fs::expected_fs
+  tl::expected
+)
+```
+
 ### Custom Result Domains
 
 Third-party expected implementations can be integrated through a minimal,
@@ -198,16 +228,17 @@ for unusual result types or behavior that does not fit this stateless protocol.
 
 ## Header-Only Use
 
-`expected_fs` is distributed as a single public header. For the simplest
-integration path, copy `include/expected_fs/expected_fs.hpp` into your project
-and include it directly:
+The `expected_fs` core is distributed as a self-contained public header. For
+the simplest integration path, copy `include/expected_fs/expected_fs.hpp` into
+your project and include it directly:
 
 ```cpp
 #include <expected_fs/expected_fs.hpp>
 ```
 
-The header requires C++23 `<expected>` support and does not require linking an
-additional library.
+The core header requires C++23 `<expected>` support and does not require
+linking an additional library. Optional result-domain adapters are distributed
+as separate headers and declare their own third-party include requirements.
 
 ## API Coverage
 

@@ -1,24 +1,21 @@
-#include "expected_fs/expected_fs.hpp"
+#include "expected_fs/result_domains/tl_expected.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <tl/expected.hpp>
 
 #include <chrono>
 #include <concepts>
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <type_traits>
 #include <utility>
 
 namespace {
 namespace tl_expected_test {
-struct domain {};
-
 struct mapped_error {
   std::error_code value;
 
@@ -32,45 +29,6 @@ struct mapped_size {
 };
 } // namespace tl_expected_test
 } // namespace
-
-namespace expected_fs {
-template <>
-struct result_domain_traits<tl_expected_test::domain> {
-  template <class T, class E>
-  using result = tl::expected<T, E>;
-};
-
-template <class T, class E, class Value>
-  requires(!std::is_void_v<T>)
-[[nodiscard]] static auto
-tag_invoke(result_success_t, tl_expected_test::domain, std::type_identity<T>,
-           std::type_identity<E>, Value &&value)
-    -> result_t<tl_expected_test::domain, T, E> {
-  return result_t<tl_expected_test::domain, T, E>{
-      tl::in_place,
-      std::forward<Value>(value),
-  };
-}
-
-template <class E>
-[[nodiscard]] static auto
-tag_invoke(result_success_t, tl_expected_test::domain, std::type_identity<void>,
-           std::type_identity<E>)
-    -> result_t<tl_expected_test::domain, void, E> {
-  return {};
-}
-
-template <class T, class E, class Err>
-[[nodiscard]] static auto
-tag_invoke(result_failure_t, tl_expected_test::domain, std::type_identity<T>,
-           std::type_identity<E>, Err &&error)
-    -> result_t<tl_expected_test::domain, T, E> {
-  return result_t<tl_expected_test::domain, T, E>{
-      tl::unexpect,
-      E{std::forward<Err>(error)},
-  };
-}
-} // namespace expected_fs
 
 namespace {
 namespace fs = std::filesystem;
@@ -124,29 +82,31 @@ void write_text(const fs::path &path, const std::string &contents) {
   stream << contents;
 }
 
-using domain = tl_expected_test::domain;
 using mapped_error = tl_expected_test::mapped_error;
 using mapped_size = tl_expected_test::mapped_size;
 
+inline constexpr auto tl_fs = expected_fs::with_result(
+    expected_fs::tl_expected_result, expected_fs::std_fs);
+
 static_assert(std::same_as<decltype(expected_fs::file_size(
-                               expected_fs::with_result(domain{}),
                                std::declval<const fs::path &>())),
-                           tl::expected<std::uintmax_t, std::error_code>>);
-static_assert(
-    std::same_as<decltype(expected_fs::copy(expected_fs::with_result(domain{}),
-                                            std::declval<const fs::path &>(),
-                                            std::declval<const fs::path &>())),
-                 tl::expected<void, std::error_code>>);
+                           std::expected<std::uintmax_t, std::error_code>>);
 static_assert(std::same_as<decltype(expected_fs::file_size(
-                               expected_fs::with_value<void>(domain{}),
+                               tl_fs, std::declval<const fs::path &>())),
+                           tl::expected<std::uintmax_t, std::error_code>>);
+static_assert(std::same_as<decltype(expected_fs::copy(
+                               tl_fs, std::declval<const fs::path &>(),
                                std::declval<const fs::path &>())),
                            tl::expected<void, std::error_code>>);
-static_assert(
-    std::same_as<decltype(expected_fs::file_size(
-                     expected_fs::with_error<mapped_error>(
-                         expected_fs::with_value<mapped_size>(domain{})),
-                     std::declval<const fs::path &>())),
-                 tl::expected<mapped_size, mapped_error>>);
+static_assert(std::same_as<decltype(expected_fs::file_size(
+                               expected_fs::with_value<void>(tl_fs),
+                               std::declval<const fs::path &>())),
+                           tl::expected<void, std::error_code>>);
+static_assert(std::same_as<decltype(expected_fs::file_size(
+                               expected_fs::with_error<mapped_error>(
+                                   expected_fs::with_value<mapped_size>(tl_fs)),
+                               std::declval<const fs::path &>())),
+                           tl::expected<mapped_size, mapped_error>>);
 } // namespace
 
 TEST_CASE("tl::expected result domain returns successful filesystem results",
@@ -156,24 +116,22 @@ TEST_CASE("tl::expected result domain returns successful filesystem results",
   const auto destination = directory.path() / "destination.txt";
   write_text(source, "hello");
 
-  const auto size =
-      expected_fs::file_size(expected_fs::with_result(domain{}), source);
+  const auto size = expected_fs::file_size(tl_fs, source);
   REQUIRE(size.has_value());
   REQUIRE(*size == std::uintmax_t{5});
 
-  const auto mapped = expected_fs::file_size(
-      expected_fs::with_error<mapped_error>(
-          expected_fs::with_value<mapped_size>(domain{})),
-      source);
+  const auto mapped =
+      expected_fs::file_size(expected_fs::with_error<mapped_error>(
+                                 expected_fs::with_value<mapped_size>(tl_fs)),
+                             source);
   REQUIRE(mapped.has_value());
   REQUIRE(mapped->value == std::uintmax_t{5});
 
   const auto discarded =
-      expected_fs::file_size(expected_fs::with_value<void>(domain{}), source);
+      expected_fs::file_size(expected_fs::with_value<void>(tl_fs), source);
   REQUIRE(discarded.has_value());
 
-  const auto copied = expected_fs::copy(expected_fs::with_result(domain{}),
-                                        source, destination);
+  const auto copied = expected_fs::copy(tl_fs, source, destination);
   REQUIRE(copied.has_value());
   REQUIRE(fs::exists(destination));
 }
@@ -187,24 +145,22 @@ TEST_CASE("tl::expected result domain preserves filesystem errors",
   static_cast<void>(fs::file_size(missing, expected_error));
   REQUIRE(expected_error);
 
-  const auto size =
-      expected_fs::file_size(expected_fs::with_result(domain{}), missing);
+  const auto size = expected_fs::file_size(tl_fs, missing);
   REQUIRE_FALSE(size.has_value());
   REQUIRE(size.error() == expected_error);
 
   const auto mapped = expected_fs::file_size(
-      expected_fs::with_error<mapped_error>(domain{}), missing);
+      expected_fs::with_error<mapped_error>(tl_fs), missing);
   REQUIRE_FALSE(mapped.has_value());
   REQUIRE(mapped.error().value == expected_error);
 
   const auto discarded =
-      expected_fs::file_size(expected_fs::with_value<void>(domain{}), missing);
+      expected_fs::file_size(expected_fs::with_value<void>(tl_fs), missing);
   REQUIRE_FALSE(discarded.has_value());
   REQUIRE(discarded.error() == expected_error);
 
   const auto copied =
-      expected_fs::copy(expected_fs::with_result(domain{}), missing,
-                        directory.path() / "destination.txt");
+      expected_fs::copy(tl_fs, missing, directory.path() / "destination.txt");
   REQUIRE_FALSE(copied.has_value());
   REQUIRE(copied.error());
 }
